@@ -60,8 +60,7 @@ Estimate #--Total--Description
                                 """;
 
                         List<DataPDF> dataPDFList = DataPDF.parseFromText(textContent);
-
-                        modifyPdf(templatePdf, dataPDFList);
+                        modifyPdfProduct(templatePdf, dataPDFList);
                     } else {
                         log.warn("Skipping empty file: {}", pdfFile.getName());
                     }
@@ -110,23 +109,38 @@ Estimate #--Total--Description
         return textContent;
     }
 
-    private static void modifyPdf(File sourceFile, List<DataPDF> content) {
+    private static void modifyPdfProduct(File sourceFile, List<DataPDF> content) {
         try {
             String outputPath = sourceFile.getParent() + File.separator + "modified_" + sourceFile.getName();
             PdfDocument pdfDoc = new PdfDocument(new PdfReader(sourceFile), new PdfWriter(outputPath));
-            PdfPage page = pdfDoc.getFirstPage();
-            PdfCanvas pdfCanvas = new PdfCanvas(page);
+
             com.itextpdf.layout.Document document = new com.itextpdf.layout.Document(pdfDoc);
 
-            Paragraph p = new Paragraph(content.getFirst().estimateNumber())
+            //Add Estimate Number
+            Paragraph estimateNumberText = new Paragraph(content.getFirst().estimateNumber())
                     .setFontColor(new DeviceRgb(0.973f, 0.973f, 0.973f))
-//                    .setFontColor(ColorConstants.CYAN)
                     .setFont(PdfFontFactory.createFont("src/main/resources/fonts/Montserrat-Regular.ttf"))
                     .setFontSize(12)
                     .setBold()
                     .setFixedPosition(270, 802, 400);
+            document.add(estimateNumberText);
 
-            document.add(p);
+            //Add Original Price and Fake Price
+            String originalTotal = content.getFirst().total().replace("$", "").replace(",", "").trim();
+            double numericTotal = Double.parseDouble(originalTotal);
+            String originalPrice = String.format("$%,.0f", numericTotal);
+            String fakePrice = String.format("$%,.2f", numericTotal * 1.05);
+
+
+            Paragraph fakePriceText = new Paragraph(fakePrice)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setFont(PdfFontFactory.createFont("src/main/resources/fonts/Montserrat-Regular.ttf"))
+                    .setFontSize(26)
+                    .setBold()
+                    .setFixedPosition(230, 90, 600)
+                    .setLineThrough();
+            document.add(fakePriceText);
+
             document.close();
             pdfDoc.close();
             log.info("PDF modified successfully: {}", outputPath);
